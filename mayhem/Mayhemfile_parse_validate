@@ -1,0 +1,14 @@
+# In-process libFuzzer target over the WebAssembly binary parser/validator
+# (wasmparser 0.258.0, the version wasmtime pins). Feeds fuzz bytes into the streaming
+# Parser and the full Validator; a panic / ASan report inside wasmparser is a finding.
+project: savantenvs/wasmtime
+target: parse_validate
+image: savantenvs/wasmtime:latest
+
+cmds:
+  - cmd: /mayhem/parse_validate
+    libfuzzer: true
+
+testsuite:
+  - https://$MAYHEM_DOMAIN/$MAYHEM_PROJECT/$MAYHEM_TARGET/testsuite.tar
+  - file://mayhem/parse_validate/testsuite

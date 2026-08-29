@@ -1,0 +1,44 @@
+# Additive cargo-fuzz crate for the Mayhem integration of wasmtime.
+#
+# WHY this crate instead of upstream's own `fuzz/` crate:
+#   wasmtime's `fuzz/` crate pulls the ENTIRE engine (cranelift-codegen for every ISA,
+#   winch, the full `wasmtime` runtime) and, via its DEFAULT features, `v8` (builds V8
+#   from source) and `fuzz-spec-interpreter` (the OCaml WebAssembly spec interpreter).
+#   The whole workspace also declares rust-version = "1.96.0", which no known-good
+#   ASan-capable nightly satisfies. Building that under -Zsanitizer=address on a shared
+#   box is the "intractable giant" the porting brief warns to avoid.
+#
+#   The brief names the "wasm parser/validator" as the great fuzzing surface. That is
+#   exactly `wasmparser` — the WebAssembly binary parser + validator wasmtime consumes.
+#   wasmtime pins it at `wasmparser = "0.258.0"` (a crates.io dependency, NOT a workspace
+#   member, so it carries its OWN low MSRV of 1.85.0 and builds on a known-good nightly).
+#   This crate fuzzes that exact pinned version. Upstream files are untouched; this crate
+#   only CALLS wasmparser, and its own [workspace] table keeps it out of the root
+#   workspace's resolution (whose 1.96.0 MSRV would otherwise reject the build).
+[package]
+name = "wasmtime-mayhem-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# Exactly the version wasmtime pins (crates/../Cargo.toml: wasmparser = "0.258.0").
+# Default features on: validate + component-model + serde + simd + std — the full
+# parser/validator surface.
+wasmparser = "=0.258.0"
+
+# Keep this crate OUT of the wasmtime root workspace resolution (its 1.96.0 MSRV would
+# otherwise reject this crate too). This makes mayhem/fuzz its own standalone workspace,
+# so it also owns its own Cargo.lock (committed for the air-gapped re-run).
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "parse_validate"
+path = "fuzz_targets/parse_validate.rs"
+test = false
+doc = false

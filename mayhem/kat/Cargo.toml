@@ -1,0 +1,27 @@
+# Additive known-answer-test (KAT) probe for the Mayhem behavioral oracle.
+#
+# A tiny DYNAMICALLY-LINKED binary that runs wasmparser over a FIXED, hand-built
+# WebAssembly module and prints values it COMPUTES from the parse/validation result.
+# mayhem/test.sh runs it on that fixed input and asserts the exact output — so a PATCH
+# that neuters wasmparser to a no-op changes the printed values and FAILS the oracle
+# (SPEC §6.3 anti-reward-hacking). Because the binary is dynamically linked, the gate's
+# LD_PRELOAD sabotage shim reaches it (its constructor _exit(0)s the probe before main,
+# so it prints nothing and the oracle fails) — proving the oracle is behavioral.
+#
+# Own [workspace] table so it is NOT pulled into the wasmtime root workspace (whose
+# 1.96.0 MSRV would reject it); depends only on the same pinned wasmparser 0.258.0.
+[package]
+name = "wasmtime-mayhem-kat"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+wasmparser = "=0.258.0"
+
+[[bin]]
+name = "kat_probe"
+path = "src/main.rs"
+
+[workspace]
+members = ["."]
