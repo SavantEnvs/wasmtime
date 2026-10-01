@@ -1,0 +1,13 @@
+# Backport of mayhemheroes/wasmtime run 139 (target `api-calls`) — a libFuzzer target over
+# Wasmtime's own public API (Store/Module/Instance lifecycle + exported-function calls), fed a
+# swarm-tested sequence of API calls and wasm-smith-generated modules. See mayhem/fuzz/Cargo.toml
+# for why this is a vendored, trimmed copy of upstream's own fuzz/fuzz_targets/api_calls.rs rather
+# than a dependency on it.
+# origin: https://app.mayhem.security/mayhemheroes/wasmtime/api-calls/139
+project: savantenvs/wasmtime
+target: api-calls-buggy-mhh-run-139
+image: savantenvs/wasmtime:latest
+
+cmds:
+  - cmd: /mayhem/api_calls
+    libfuzzer: true

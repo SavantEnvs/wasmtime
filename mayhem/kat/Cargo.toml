@@ -1,0 +1,30 @@
+# Additive known-answer-test (KAT) probe for the Mayhem behavioral oracle (SPEC §6.3).
+#
+# A tiny DYNAMICALLY-LINKED binary that compiles + instantiates + calls a FIXED, hand-built
+# WebAssembly module through this commit's own `wasmtime` engine (the one `api_calls` fuzzes) and
+# prints a value it COMPUTES from running it. mayhem/test.sh runs it and asserts the exact output,
+# so a patch that neuters the engine (or wasmparser/cranelift underneath it) to a no-op changes the
+# printed value and FAILS the oracle. Because the binary is dynamically linked, the gate's
+# LD_PRELOAD sabotage shim reaches it (its constructor _exit(0)s the probe before main, so it
+# prints nothing and the oracle fails) — proving the oracle is behavioral.
+#
+# Own [workspace] table so it is NOT pulled into the wasmtime root workspace; depends only on this
+# commit's own `wasmtime` crate (by path, the exact engine the bug lived in) with its own defaults.
+[package]
+name = "wasmtime-mayhem-kat"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+wasmtime = { path = "../../crates/wasmtime", version = "5.0.0" }
+# See mayhem/fuzz/Cargo.toml: pins `object`'s transitive crc32fast away from a version whose
+# AVX-512 path doesn't build under our pinned nightly.
+crc32fast = "=1.3.2"
+
+[[bin]]
+name = "kat_probe"
+path = "src/main.rs"
+
+[workspace]
+members = ["."]

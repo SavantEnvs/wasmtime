@@ -1,0 +1,84 @@
+# Additive cargo-fuzz crate for the Mayhem backport of wasmtime's `api_calls` target
+# (mayhemheroes/wasmtime run 139, target `api-calls`).
+#
+# WHY this crate vendors `generators`/`oracles` instead of depending on upstream's own `fuzz/`
+# crate (which already HAS a `fuzz_targets/api_calls.rs` driving the exact same
+# `wasmtime_fuzzing::{generators::api::ApiCalls, oracles::make_api_calls}` this crate calls):
+#   `fuzz/`'s only path dependency is `wasmtime-fuzzing` (`crates/fuzzing`), whose `oracles.rs`
+#   unconditionally declares `mod diff_v8;` for any non-windows/s390x/riscv64 target — not gated
+#   on any Cargo feature — so compiling `wasmtime-fuzzing` AT ALL, regardless of which binary in
+#   `fuzz/` is being built, pulls in the `v8` crate (`rusty_v8`), whose build script fetches a
+#   prebuilt V8 static library over the network. That is incompatible with the air-gapped PATCH
+#   rebuild contract (SPEC §6.5: the commit image's first build may hit the network once, to
+#   populate caches under a fixed, $HOME-independent prefix; subsequent rebuilds run fully
+#   offline). `crates/fuzzing` also pulls in `wasm-spec-interpreter` (an OCaml build) and `wasmi`,
+#   neither of which `api_calls` exercises.
+#
+# This crate is `src/generators.rs` + `src/oracles.rs`: a byte-for-byte copy of
+# `crates/fuzzing/src/generators/{api,config,module,memory,pooling_config,
+# instance_allocation_strategy,codegen_settings}.rs` and a TRIMMED copy of
+# `crates/fuzzing/src/oracles.rs` (drops `diff_v8`/`diff_spec`/`diff_wasmi`/`diff_wasmtime`/
+# `engine`/`stacks`, keeps `dummy`/`StoreLimits`/`Timeout`/`log_wasm`/`instantiate_with_dummy`/
+# `make_api_calls`) at the commit this branch is pinned to. `fuzz_targets/api_calls.rs` is
+# otherwise identical to upstream's. Depends on `wasmtime` by PATH (this commit's own engine, the
+# one the bug lived in) but nothing else from the workspace. Upstream files are untouched.
+#
+# Own [workspace] table so this crate (and its path dependency on crates/wasmtime) is NOT pulled
+# into the wasmtime root workspace's resolution; it owns its own Cargo.lock.
+[package]
+name = "wasmtime-mayhem-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[lib]
+name = "wasmtime_mayhem_fuzz"
+path = "src/lib.rs"
+
+[dependencies]
+# `libfuzzer-sys`/`arbitrary`/`wasm-smith` are pinned to the EXACT versions the root workspace's
+# own Cargo.lock resolves at this commit (not just their semver floor): the crashers this branch
+# replays were produced by decoding raw fuzzer bytes through these crates' `Arbitrary` impls, which
+# is sensitive to patch-level changes (consumption order, `choose`/`int_in_range` behavior) even
+# within a semver-compatible range — a caret requirement re-resolved against today's crates.io
+# index silently picks a newer patch and decodes the SAME bytes into a DIFFERENT, non-crashing
+# sequence of API calls. `wasmprinter` only feeds debug-log output (not decoding), so it is not
+# pinned exactly.
+libfuzzer-sys = { version = "=0.4.5", features = ["arbitrary-derive"] }
+arbitrary = { version = "=1.1.0", features = ["derive"] }
+# `arbitrary`'s own Cargo.toml declares its `derive` feature's dependency on `derive_arbitrary`
+# with a loose "1" requirement, so pinning only `arbitrary` still let cargo float the derive
+# macro to a NEWER `derive_arbitrary` that emits calls to trait methods (`try_size_hint`, etc.)
+# `arbitrary` 1.1.0 doesn't have. Pin it to match explicitly.
+derive_arbitrary = "=1.1.0"
+anyhow = "1.0.22"
+log = { version = "0.4.8", default-features = false }
+env_logger = "0.9"
+target-lexicon = { version = "0.12.3", default-features = false }
+tempfile = "3.3.0"
+wasmprinter = "0.2.44"
+wasm-smith = "=0.11.9"
+# Old code x current toolchain: this standalone workspace has no committed Cargo.lock, so cargo
+# resolves `object`'s transitive `crc32fast` against the CURRENT crates.io index. crc32fast 1.5.2
+# gates its AVX-512 path on an unstable `stdarch_x86_avx512` feature our pinned nightly
+# (2025-06-01) doesn't carry under the std path it expects — pin the version the root workspace's
+# own Cargo.lock uses at this commit (`crc32fast = "1.3.2"`), well before that code existed.
+crc32fast = "=1.3.2"
+# No `default-features = false`: unlike upstream's `fuzz/Cargo.toml` (which gets `cranelift` +
+# `pooling-allocator` only via feature unification with `wasmtime-fuzzing`'s `features =
+# ['default']`), this crate is the only place that names `wasmtime`, so it takes the crate's own
+# `default` feature list directly (cranelift, pooling-allocator, cache, wat, jitdump,
+# parallel-compilation, vtune — `crates/wasmtime/Cargo.toml`).
+wasmtime = { path = "../../crates/wasmtime", version = "5.0.0" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "api_calls"
+path = "fuzz_targets/api_calls.rs"
+test = false
+doc = false
