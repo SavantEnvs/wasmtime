@@ -1,0 +1,18 @@
+# Additive known-answer probe for the Mayhem behavioral oracle (SPEC 6.3): a small DYNAMICALLY-LINKED
+# binary that lifts enums through `#[derive(Lift)]` and prints what it got. mayhem/test.sh asserts the
+# exact output. Standalone workspace, built without the fuzz sanitizer flags.
+[package]
+name = "wasmtime-mayhem-kat"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+wasmtime = { path = "../../crates/wasmtime", default-features = false, features = ["std", "runtime", "cranelift", "component-model", "wat"] }
+
+[[bin]]
+name = "kat_probe"
+path = "src/main.rs"
+
+[workspace]
+members = ["."]
