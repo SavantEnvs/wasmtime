@@ -1,0 +1,18 @@
+# Additive known-answer probe for the Mayhem behavioral oracle (SPEC 6.3): a small DYNAMICALLY-LINKED
+# binary that parses and compiles ISLE rules and prints what it got. mayhem/test.sh asserts the exact
+# output. Standalone workspace, built without the fuzz sanitizer flags.
+[package]
+name = "isle-mayhem-kat"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+cranelift-isle = { path = "../../cranelift/isle/isle" }
+
+[[bin]]
+name = "kat_probe"
+path = "src/main.rs"
+
+[workspace]
+members = ["."]

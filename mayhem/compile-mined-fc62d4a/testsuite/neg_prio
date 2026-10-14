@@ -1,0 +1,4 @@
+(type u8 (primitive u8))
+(decl G (u8 u8) u8)
+(extern constructor G g)
+(rule -3 (G a b) (G b a))

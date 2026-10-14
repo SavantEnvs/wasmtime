@@ -1,0 +1,13 @@
+# In-process libFuzzer target over cranelift-isle's lexer, parser and compiler (the harness of
+# cranelift/isle/fuzz), mined for the upstream fix d38631a724: an out-of-range rule priority panicked.
+project: savantenvs/wasmtime
+target: compile-mined-fc62d4a
+image: savantenvs/wasmtime:latest
+
+cmds:
+  - cmd: /mayhem/compile
+    libfuzzer: true
+
+testsuite:
+  - https://$MAYHEM_DOMAIN/$MAYHEM_PROJECT/$MAYHEM_TARGET/testsuite.tar
+  - file://mayhem/compile-mined-fc62d4a/testsuite

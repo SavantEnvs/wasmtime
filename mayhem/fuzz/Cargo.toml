@@ -1,0 +1,23 @@
+# Additive cargo-fuzz crate for the Mayhem mining of cranelift-isle's rule-priority fix (d38631a724).
+# Standalone workspace: keeps it out of the root workspace resolution and gives it its own Cargo.lock.
+[package]
+name = "isle-mayhem-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+cranelift-isle = { path = "../../cranelift/isle/isle" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "compile"
+path = "fuzz_targets/compile.rs"
+test = false
+doc = false
