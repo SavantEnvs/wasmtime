@@ -1,0 +1,23 @@
+# Additive cargo-fuzz crate for the Mayhem mining of wasmtime's `#[derive(Lift)]` fix (85eed831c0).
+# Standalone workspace: keeps it out of the root workspace resolution and gives it its own Cargo.lock.
+[package]
+name = "wasmtime-mayhem-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+wasmtime = { path = "../../crates/wasmtime", default-features = false, features = ["std", "runtime", "cranelift", "component-model", "wat"] }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "lift_enum"
+path = "fuzz_targets/lift_enum.rs"
+test = false
+doc = false

@@ -1,0 +1,13 @@
+# In-process libFuzzer target over wasmtime's `#[derive(Lift)]` for enums read from linear memory
+# (mined for the upstream fix 85eed831c0: an enum of exactly 256 cases rejected every discriminant).
+project: savantenvs/wasmtime
+target: lift_enum-mined-cdc7bfe
+image: savantenvs/wasmtime:latest
+
+cmds:
+  - cmd: /mayhem/lift_enum
+    libfuzzer: true
+
+testsuite:
+  - https://$MAYHEM_DOMAIN/$MAYHEM_PROJECT/$MAYHEM_TARGET/testsuite.tar
+  - file://mayhem/lift_enum-mined-cdc7bfe/testsuite
